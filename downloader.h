@@ -12,13 +12,20 @@ public:
 
     void run();
 
-private:
+    // struct DowloadResult
+    // {
+    //     string url;
+    //     bool success;
+    //     string message;
+    //     string filename;
+    // };
+
     string url_file_;
     string output_dir_;
     int max_parallel_;
 
-    string Downloader::sanitize_filename(const string &filename);
-    string Downloader::get_filename_from_url(const string &url);
+    string get_filename_from_url(const string &url);
+    string sanitize_filename(const string &filename);
 };
 
 #endif // DOWNLOADER_H
