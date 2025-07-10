@@ -17,6 +17,7 @@ private:
     string output_dir_;
     int max_parallel_;
 
+    string Downloader::sanitize_filename(const string &filename);
     string Downloader::get_filename_from_url(const string &url);
 };
 

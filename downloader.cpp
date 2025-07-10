@@ -8,6 +8,23 @@ Downloader::Downloader(const string &url_file, const string &output_dir, int max
 {
 }
 
+string Downloader::sanitize_filename(const string &filename)
+{
+    string result;
+    for (char c : filename)
+    {
+        if (isalnum(c) || c == '.' || c == '-' || c == '_')
+        {
+            result += c;
+        }
+        else
+        {
+            result += '_';
+        }
+    }
+    return result;
+}
+
 string Downloader::get_filename_from_url(const string &url)
 {
     size_t last_slash = url.find_last_of('/');
@@ -22,7 +39,7 @@ string Downloader::get_filename_from_url(const string &url)
         return "file";
     }
 
-    return filename;
+    return sanitize_filename(filename);
 }
 
 void Downloader::run()
