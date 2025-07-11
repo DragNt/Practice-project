@@ -1,6 +1,9 @@
 #ifndef DOWNLOADER_H
 #define DOWNLOADER_H
 #include <iostream>
+#include <vector>
+#include <algorithm>
+#include <fstream>
 
 using namespace std;
 
@@ -24,6 +27,7 @@ public:
     string output_dir_;
     int max_parallel_;
 
+    vector<string> read_url();
     string get_filename_from_url(const string &url);
     string sanitize_filename(const string &filename);
 };

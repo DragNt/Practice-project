@@ -8,6 +8,32 @@ Downloader::Downloader(const string &url_file, const string &output_dir, int max
 {
 }
 
+// Чтение URL из файла построчно
+vector<string> Downloader::read_url()
+{
+    ifstream file(url_file_);
+    if (!file.is_open())
+    {
+        throw runtime_error("Failed to open URL file " + url_file_);
+    }
+
+    vector<string> urls;
+    string line;
+    while (getline(file, line))
+    {
+        // Удаление символа возврата каретки (для кросс-платформенности)
+        line.erase(remove(line.begin(), line.end(), '\r'), line.end());
+
+        if (!line.empty())
+        {
+            urls.push_back(line);
+        }
+    }
+
+    return urls;
+}
+
+// Очищает имя файла от от недопустимых символов
 string Downloader::sanitize_filename(const string &filename)
 {
     string result;
@@ -25,6 +51,7 @@ string Downloader::sanitize_filename(const string &filename)
     return result;
 }
 
+// Извлекает имя файла из URL
 string Downloader::get_filename_from_url(const string &url)
 {
     size_t last_slash = url.find_last_of('/');
