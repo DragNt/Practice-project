@@ -1,6 +1,8 @@
 #ifndef DOWNLOADER_H
 #define DOWNLOADER_H
+#include "gtest/gtest.h"
 #include <iostream>
+#include <string>
 #include <vector>
 #include <algorithm>
 #include <fstream>
@@ -28,6 +30,7 @@ public:
     int max_parallel_;
 
     vector<string> read_url();
+    bool make_directory(const string &path);
     string get_filename_from_url(const string &url);
     string sanitize_filename(const string &filename);
 };

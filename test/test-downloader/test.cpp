@@ -1,14 +1,15 @@
 #include "pch.h"
 #include "C:\\Users\\User\\Desktop\\Practice-progect\\Practice-project\\downloader.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 using namespace std;
+
 
 TEST(DownloaderTest, TestSanitizeFilename) {
     Downloader d("", "", 1);
     EXPECT_EQ(d.sanitize_filename("normal.txt"), "normal.txt");
     EXPECT_EQ(d.sanitize_filename("file$name.jpg"), "file_name.jpg");
-    EXPECT_EQ(d.sanitize_filename("UPPER&lower.png"), "UPPER_lower.png");
+    EXPECT_EQ(d.sanitize_filename("UPPER&lower.png"), "UPPER_lower.clapng");
 }
 
 TEST(DownloaderTest, TestGetFilenameFromURL) {
