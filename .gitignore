@@ -1,5 +1,6 @@
 .vscode
 main.exe
+test/.vs
 test/packages
 test/x64
 test/test.sln
