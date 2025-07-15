@@ -1,4 +1,5 @@
 .vscode
+POCO
 main.exe
 test/.vs
 test/packages

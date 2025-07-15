@@ -1,27 +1,10 @@
 #include "downloader.h"
-#include <iostream>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
 
 using namespace std;
 
 Downloader::Downloader(const string &url_file, const string &output_dir, int max_parallel)
     : url_file_(url_file), output_dir_(output_dir), max_parallel_(max_parallel)
 {
-}
-
-// Создаёт директорию (кросс - платформенно)
-bool Downloader::make_directory(const string &path)
-{
-#ifdef _WIN32
-    return CreateDirectoryA(path.c_str(), NULL) != 0 || GetLastError() == ERROR_ALREADY_EXISTS;
-#else
-    return mkdir(path, 0777) == 0 || errno == EEXIST;
-#endif
 }
 
 // Чтение URL из файла построчно

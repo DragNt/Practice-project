@@ -1,7 +1,6 @@
 #ifndef DOWNLOADER_H
 #define DOWNLOADER_H
 #include "gtest/gtest.h"
-#include <iostream>
 #include <string>
 #include <vector>
 #include <algorithm>
