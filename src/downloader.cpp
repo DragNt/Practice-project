@@ -1,10 +1,27 @@
 #include "downloader.h"
 #include <Poco/NumberFormatter.h>
+#include <Poco/Net/HTTPSClientSession.h>
+#include <Poco/Net/SSLManager.h>
+#include <Poco/Net/AcceptCertificateHandler.h>
 using namespace std;
 
 Downloader::Downloader(const string &url_file, const string &output_dir, int max_parallel)
-    : url_file_(url_file), output_dir_(output_dir), max_parallel_(max_parallel)
+    : url_file_(url_file), output_dir_(output_dir), max_parallel_(max_parallel), treadPool_(1, max_parallel)
 {
+    // Инициализация SSL (для HTTPS)
+    Poco::Net::initializeSSL();
+    Poco::SharedPtr<Poco::Net::InvalidCertificateHandler> certHandler =
+        new Poco::Net::AcceptCertificateHandler(false);
+    Poco::Net::Context::Ptr context =
+        new Poco::Net::Context(Poco::Net::Context::CLIENT_USE, "", "", "",
+                               Poco::Net::Context::VERIFY_NONE, 9, false,
+                               "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+    Poco::Net::SSLManager::instance().initializeClient(0, certHandler, context);
+}
+
+Downloader::~Downloader()
+{
+    Poco::Net::uninitializeSSL();
 }
 
 // Чтение URL из файла построчно
