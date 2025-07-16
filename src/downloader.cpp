@@ -1,5 +1,9 @@
 #include "downloader.h"
+#include <fstream>
+#include <Poco/StreamCopier.h>
 #include <Poco/NumberFormatter.h>
+#include <Poco/DirectoryIterator.h>
+#include <Poco/Net/Context.h>
 #include <Poco/Net/HTTPSClientSession.h>
 #include <Poco/Net/SSLManager.h>
 #include <Poco/Net/AcceptCertificateHandler.h>
@@ -47,6 +51,105 @@ vector<string> Downloader::read_url()
     }
 
     return urls;
+}
+
+void Downloader::run()
+{
+    log("Program started");
+    log("Input parameters:");
+    log("  URL file: " + url_file_);
+    log("  Output directory: " + output_dir_);
+    log("  Concurrency: " + Poco::NumberFormatter::format(max_parallel));
+
+    // Создаёт выходной каталог, если он не существует
+    Poco::File outputDir(output_dir_);
+    if (!outputDir.exists())
+    {
+        outputDir.createDirectories();
+    }
+
+    // Чтение URL-адресов из файла
+    vector<string> urls = read_url();
+
+    for (const auto &url : urls)
+    {
+        threadPool_.start(new DownloadTask(*this, url));
+    }
+
+    threadPool_.joinAll();
+    log("Program finished");
+}
+
+void Downloader::processURL(const std::string &url)
+{
+    log("Starting download: " + url);
+
+    try
+    {
+        Poco::URI uri(url);
+        string path(uri.getPathAndQuery());
+        if (path.empty())
+            path = "/";
+
+        Poco::Net::HTTPClientSession *session = nullptr;
+        if (uri.getScheme() == "https")
+        {
+            session = new Poco::Net::HTTPSClientSession(uri.getHost(), uri.getPort());
+        }
+        else
+        {
+            session = new Poco::Net::HTTPClientSession(uri.getHost(), uri.getPort());
+        }
+
+        Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, path,
+                                       Poco::Net::HTTPMessage::HTTP_1_1);
+        Poco::Net::HTTPResponse response;
+
+        session->sendRequest(request);
+        istream &rs = session->receiveResponse(response);
+
+        if (response.getStatus() != Poco::Net::HTTPResponse::HTTP_OK)
+        {
+            log("Error: Server returned status code: " +
+                Poco::NumberFormatter::format(response.getStatus()) +
+                " for URL: " + url);
+            delete session;
+            return;
+        }
+
+        // Определяет имя файла
+        string filename;
+        if (response.has("Content-Disposition"))
+        {
+            filename = get_filename_from_content_disposition(response.get("Content-Disposition"));
+        }
+        if (filename.empty())
+        {
+            filename = get_filename_from_url(uri);
+        }
+        filename = sanitize_filename(filename);
+        filename = generate_unique_filename(filename);
+
+        // Сохранение файла
+        string fullPath = Poco::Path(output_dir_).append(filename).toString();
+        ofstream file(fullPath, ios::binary);
+        if (file.is_open())
+        {
+            Poco::StreamCopier::copyStream(rs, file);
+            file.close();
+            log("Finished download: " + url + " -> " + fullPath);
+        }
+        else
+        {
+            log("Error: Could not open file for writing: " + fullPath);
+        }
+
+        delete session;
+    }
+    catch (Poco::Exception &e)
+    {
+        log("Error: " + e.displayText() + " for URL: " + url);
+    }
 }
 
 // Очищает имя файла от от недопустимых символов
@@ -141,6 +244,18 @@ string Downloader::generate_unique_filename(const string &filename)
     return result;
 }
 
-void Downloader::run()
+void Downloader::log(const string &message)
 {
+    cout << Poco::DateTimeFormatter::format(
+                Poco::Timestamp(),
+                "%Y-%m-%d %H:%M:%S.%i")
+         << " - " << message << endl;
+}
+
+DownloadTask::DownloadTask(Downloader &downloader, const std::string &url)
+    : downloader_(downloader), url_(url) {}
+
+void DownloadTask::run()
+{
+    downloader_.processURL(url_);
 }

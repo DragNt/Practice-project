@@ -4,9 +4,18 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <fstream>
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
+#include <Poco/URI.h>
 #include <Poco/File.h>
 #include <Poco/Path.h>
+#include <Poco/Exception.h>
+#include <Poco/ThreadPool.h>
+#include <Poco/Runnable.h>
+#include <Poco/DateTimeFormatter.h>
+#include <Poco/DateTimeFormat.h>
+#include <memory>
 
 using namespace std;
 
@@ -27,6 +36,20 @@ public:
     string get_filename_from_content_disposition(const string &content_disposition);
     string sanitize_filename(const string &filename);
     string generate_unique_filename(const string &filename);
+    void log(const string &message)
+
+        Poco::ThreadPool threadPool_;
+};
+
+class DownloadTask : public Poco::Runnable
+{
+public:
+    DownloadTask(Downloader &downloader, const std::string &url);
+    void run() override;
+
+private:
+    Downloader &downloader_;
+    std::string url_;
 };
 
 #endif // DOWNLOADER_H
