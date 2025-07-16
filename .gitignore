@@ -1,4 +1,6 @@
 .vscode
+.vs
+build
 POCO
 main.exe
 test/.vs
