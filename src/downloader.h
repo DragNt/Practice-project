@@ -24,6 +24,7 @@ public:
 
     vector<string> read_url();
     string get_filename_from_url(const string &url);
+    string get_filename_from_content_disposition(const string &content_disposition);
     string sanitize_filename(const string &filename);
     string generate_unique_filename(const string &filename);
 };

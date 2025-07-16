@@ -50,6 +50,35 @@ string Downloader::sanitize_filename(const string &filename)
     return result;
 }
 
+// Функция для извлечения имени файла из HTTP заголовка
+string Downloader::get_filename_from_content_disposition(const string &content_disposition)
+{
+    const string filename_prefix = "filename=";
+    size_t pos = content_disposition.find(filename_prefix);
+    if (pos != string::npos)
+    {
+        pos += filename_prefix.length();
+        // Обработка имени в кавычках
+        if (content_disposition[pos] == '"')
+        {
+            pos++;
+            size_t end_pos = content_disposition.find('"', pos);
+            if (end_pos != string::npos)
+                return content_disposition.substr(pos, end_pos);
+        }
+        // Обработка имени без кавычек
+        else
+        {
+            size_t end_pos = content_disposition.find(';', pos);
+            if (end_pos == string::npos)
+                end_pos = content_disposition.length();
+
+            return content_disposition.substr(pos, end_pos - pos);
+        }
+    }
+    return "";
+}
+
 // Извлекает имя файла из URL
 string Downloader::get_filename_from_url(const string &url)
 {
