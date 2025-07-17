@@ -7,6 +7,7 @@
 #include <Poco/Net/HTTPSClientSession.h>
 #include <Poco/Net/SSLManager.h>
 #include <Poco/Net/AcceptCertificateHandler.h>
+
 using namespace std;
 
 Downloader::Downloader(const string &url_file, const string &output_dir, int max_parallel)
@@ -33,9 +34,7 @@ vector<string> Downloader::read_url()
 {
     ifstream file(url_file_);
     if (!file.is_open())
-    {
         throw runtime_error("Failed to open URL file " + url_file_);
-    }
 
     vector<string> urls;
     string line;
@@ -45,9 +44,7 @@ vector<string> Downloader::read_url()
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
 
         if (!line.empty())
-        {
             urls.push_back(line);
-        }
     }
 
     return urls;
@@ -57,30 +54,29 @@ void Downloader::run()
 {
     log("Program started");
     log("Input parameters:");
-    log("  URL file: " + url_file_);
-    log("  Output directory: " + output_dir_);
-    log("  Concurrency: " + Poco::NumberFormatter::format(max_parallel));
+    log("URL file: " + url_file_);
+    log("Output directory: " + output_dir_);
+    log("Concurrency: " + Poco::NumberFormatter::format(max_parallel));
 
     // Создаёт выходной каталог, если он не существует
     Poco::File outputDir(output_dir_);
     if (!outputDir.exists())
-    {
         outputDir.createDirectories();
-    }
 
     // Чтение URL-адресов из файла
     vector<string> urls = read_url();
 
+    // Запуск в многопоточном режиме
     for (const auto &url : urls)
-    {
         threadPool_.start(new DownloadTask(*this, url));
-    }
 
+    // Ожидает завершение всех задач
     threadPool_.joinAll();
+
     log("Program finished");
 }
 
-void Downloader::processURL(const std::string &url)
+void Downloader::processURL(const string &url)
 {
     log("Starting download: " + url);
 
@@ -120,13 +116,11 @@ void Downloader::processURL(const std::string &url)
         // Определяет имя файла
         string filename;
         if (response.has("Content-Disposition"))
-        {
             filename = get_filename_from_content_disposition(response.get("Content-Disposition"));
-        }
+
         if (filename.empty())
-        {
             filename = get_filename_from_url(uri);
-        }
+
         filename = sanitize_filename(filename);
         filename = generate_unique_filename(filename);
 
@@ -156,17 +150,15 @@ void Downloader::processURL(const std::string &url)
 string Downloader::sanitize_filename(const string &filename)
 {
     string result;
+
     for (char c : filename)
     {
         if (isalnum(c) || c == '.' || c == '-' || c == '_')
-        {
             result += c;
-        }
         else
-        {
             result += '_';
-        }
     }
+
     return result;
 }
 
@@ -204,33 +196,30 @@ string Downloader::get_filename_from_url(const string &url)
 {
     size_t last_slash = url.find_last_of('/');
     if (last_slash == string::npos)
-    {
         return "file";
-    }
 
     string filename = url.substr(last_slash + 1);
     if (filename.empty())
-    {
         return "file";
-    }
 
     return sanitize_filename(filename);
 }
 
 string Downloader::generate_unique_filename(const string &filename)
 {
+    Poco::Mutex::ScopedLock lock(mutex_);
+
     string base_name;
     string extension;
     size_t dot_pos = filename.find_last_of('.');
+
     if (dot_pos != string::npos)
     {
         base_name = filename.substr(0, dot_pos);
         extension = filename.substr(dot_pos);
     }
     else
-    {
         base_name = filename;
-    }
 
     string result = filename;
     int counter = 1;
@@ -244,15 +233,17 @@ string Downloader::generate_unique_filename(const string &filename)
     return result;
 }
 
+//
 void Downloader::log(const string &message)
 {
+    Poco::Mutex::ScopedLock lock(mutex_);
     cout << Poco::DateTimeFormatter::format(
                 Poco::Timestamp(),
                 "%Y-%m-%d %H:%M:%S.%i")
          << " - " << message << endl;
 }
 
-DownloadTask::DownloadTask(Downloader &downloader, const std::string &url)
+DownloadTask::DownloadTask(Downloader &downloader, const string &url)
     : downloader_(downloader), url_(url) {}
 
 void DownloadTask::run()

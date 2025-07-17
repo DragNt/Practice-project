@@ -11,6 +11,7 @@
 #include <Poco/File.h>
 #include <Poco/Path.h>
 #include <Poco/Exception.h>
+#include <Poco/Mutex.h>
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
 #include <Poco/DateTimeFormatter.h>
@@ -30,26 +31,27 @@ public:
     string url_file_;
     string output_dir_;
     int max_parallel_;
+    Poco::Mutex mutex_;
+    Poco::ThreadPool threadPool_;
 
     vector<string> read_url();
+    void processURL(const string &url);
     string get_filename_from_url(const string &url);
     string get_filename_from_content_disposition(const string &content_disposition);
     string sanitize_filename(const string &filename);
     string generate_unique_filename(const string &filename);
     void log(const string &message)
-
-        Poco::ThreadPool threadPool_;
 };
 
 class DownloadTask : public Poco::Runnable
 {
 public:
-    DownloadTask(Downloader &downloader, const std::string &url);
+    DownloadTask(Downloader &downloader, const string &url);
     void run() override;
 
 private:
     Downloader &downloader_;
-    std::string url_;
+    string url_;
 };
 
 #endif // DOWNLOADER_H

@@ -14,3 +14,8 @@ A console application that downloads files from a list of URLs with parallel pro
 
 - C++17 compatible compiler
 - CMake 3.10 or higher
+- Poco Libraries (version 1.9.0 or higher)
+  - Foundation
+  - Net
+  - SSL
+  - Util
