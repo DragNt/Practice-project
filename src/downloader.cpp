@@ -11,7 +11,7 @@
 using namespace std;
 
 Downloader::Downloader(const string &url_file, const string &output_dir, int max_parallel)
-    : url_file_(url_file), output_dir_(output_dir), max_parallel_(max_parallel), treadPool_(1, max_parallel)
+    : url_file_(url_file), output_dir_(output_dir), max_parallel_(max_parallel), threadPool_(1, max_parallel)
 {
     // Инициализация SSL (для HTTPS)
     Poco::Net::initializeSSL();
@@ -32,13 +32,13 @@ Downloader::~Downloader()
 // Чтение URL из файла построчно
 vector<string> Downloader::read_url()
 {
-    ifstream file(url_file_);
-    if (!file.is_open())
+    ifstream urlFile(url_file_);
+    if (!urlFile.is_open())
         throw runtime_error("Failed to open URL file " + url_file_);
 
     vector<string> urls;
     string line;
-    while (getline(file, line))
+    while (getline(urlFile, line))
     {
         // Удаление символа возврата каретки (для кросс-платформенности)
         line.erase(remove(line.begin(), line.end(), '\r'), line.end());
@@ -47,6 +47,7 @@ vector<string> Downloader::read_url()
             urls.push_back(line);
     }
 
+    urlFile.close();
     return urls;
 }
 
@@ -56,7 +57,7 @@ void Downloader::run()
     log("Input parameters:");
     log("URL file: " + url_file_);
     log("Output directory: " + output_dir_);
-    log("Concurrency: " + Poco::NumberFormatter::format(max_parallel));
+    log("Concurrency: " + Poco::NumberFormatter::format(max_parallel_));
 
     // Создаёт выходной каталог, если он не существует
     Poco::File outputDir(output_dir_);
@@ -68,7 +69,10 @@ void Downloader::run()
 
     // Запуск в многопоточном режиме
     for (const auto &url : urls)
-        threadPool_.start(new DownloadTask(*this, url));
+    {
+        Poco::Runnable *task = new DownloadTask(*this, url);
+        threadPool_.start(task);
+    }
 
     // Ожидает завершение всех задач
     threadPool_.joinAll();
@@ -119,7 +123,7 @@ void Downloader::processURL(const string &url)
             filename = get_filename_from_content_disposition(response.get("Content-Disposition"));
 
         if (filename.empty())
-            filename = get_filename_from_url(uri);
+            filename = get_filename_from_url(url);
 
         filename = sanitize_filename(filename);
         filename = generate_unique_filename(filename);
@@ -207,7 +211,7 @@ string Downloader::get_filename_from_url(const string &url)
 
 string Downloader::generate_unique_filename(const string &filename)
 {
-    Poco::Mutex::ScopedLock lock(mutex_);
+    Poco::FastMutex::ScopedLock lock(mutex_);
 
     string base_name;
     string extension;
@@ -236,7 +240,7 @@ string Downloader::generate_unique_filename(const string &filename)
 //
 void Downloader::log(const string &message)
 {
-    Poco::Mutex::ScopedLock lock(mutex_);
+    Poco::FastMutex::ScopedLock lock(mutex_);
     cout << Poco::DateTimeFormatter::format(
                 Poco::Timestamp(),
                 "%Y-%m-%d %H:%M:%S.%i")
